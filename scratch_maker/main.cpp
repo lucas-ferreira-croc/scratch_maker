@@ -1,9 +1,17 @@
 #include <iostream>
+#include <memory>
 
 #include <glad/glad.h>
 #include <glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "Shader/Shader.h"
+
+#include "VertexArray/VertexArray.h"
+#include "Buffers/Buffer.h"
 
 const int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 
@@ -44,60 +52,69 @@ int main()
 		"C:/croc/scratch_maker/scratch_maker/assets/shaders/fragment.glsl");
 
 	float vertices[] = {
-		//posistions          //colors
-         0.5f,  0.5f, 0.0f,   0.3f, 0.3f, 0.3f,  // upper right
-         0.5f, -0.5f, 0.0f,   0.3f, 0.3f, 0.3f,  // bottom right
-        -0.5f, -0.5f, 0.0f,   0.3f, 0.3f, 0.3f,  // bottom left
-        -0.5f,  0.5f, 0.0f,   0.3f, 0.3f, 0.3f   // upper left
+		//left posistions     //colors           //bottom posistions       
+		-0.6f,  1.0f, 0.0f,   0.3f, 0.3f, 0.3f,   1.0f, -0.5f, 0.0f,  // upper right
+		-0.6f, -1.0f, 0.0f,   0.3f, 0.3f, 0.3f,   1.0f, -1.0f, 0.0f,  // bottom right
+		-1.0f, -1.0f, 0.0f,   0.3f, 0.3f, 0.3f,  -1.0f, -1.0f, 0.0f,  // bottom left
+		-1.0f,  1.0f, 0.0f,   0.3f, 0.3f, 0.3f,  -1.0f, -0.5f, 0.0f   // upper left
 	};
 
 	unsigned int indices[] = {
 		0, 1, 3, 
 		1, 2, 3
 	};
-	
-	unsigned int VBO, VAO, IBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &IBO);
 
-	glBindVertexArray(VAO);
-	
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	// TODO = turn these unique_ptr objects into stack variables
+	std::unique_ptr<VertexArray> vertexArray(new VertexArray());
+	vertexArray->bind();
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	std::unique_ptr<VertexBuffer> vertexBuffer(new VertexBuffer(vertices, sizeof(vertices)));;
+	std::unique_ptr<IndexBuffer> indexBuffer(new IndexBuffer(indices, sizeof(indices)));
 
-	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	// left position attribute
+	vertexArray->addVertexAttribPointer(0, 3, 9, 0);
 
 	// colour attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
+	vertexArray->addVertexAttribPointer(1, 3, 9, 3);
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+	// bottom position attribute
+	vertexArray->addVertexAttribPointer(2, 3, 9, 6);
+
+	vertexBuffer->unBind();
+	vertexArray->unBind();
 
 	while (!glfwWindowShouldClose(window)) 
 	{
 		// input
 		processInput(window);
 
-
 		// rendering
-		glClearColor(0.3f, 0.3f, 1.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
 		shader.bind();
-		glBindVertexArray(VAO);
+
+		shader.clearColor(0.3f, 0.3f, 1.0f, 0.0f);
+		shader.clear();
+
+		glm::mat4 transform = glm::mat4(1.0f);
+		transform = glm::translate(transform, glm::vec3(-0.6f, 0.0f, 0.0f));
+		transform = glm::scale(transform, glm::vec3(0.4f, 1.0f, 1.0f));
+		shader.setMat4("transform", transform);
+		vertexArray->bind();
+
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		
+		transform = glm::mat4(1.0f);
+		transform = glm::rotate(transform, glm::radians(90.0f) , glm::vec3(0.0f, 0.0f, 1.0f));
+		transform = glm::scale(transform, glm::vec3(1.0f, 1.0f, 1.0f));
+		shader.setMat4("transform", transform);
+		
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		// swap buffers and events
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+
+	shader.~Shader();
 
 	glfwTerminate();
 	return 0;
