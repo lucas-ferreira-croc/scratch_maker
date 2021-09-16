@@ -46,6 +46,11 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath)
 	Compile(vertexShaderCode, fragmentShaderCode);
 }
 
+Shader::~Shader()
+{
+	glDeleteProgram(ID);
+}
+
 void Shader::Compile(const char* vertexSource, const char* fragmentSource) 
 {
 	unsigned int vertex, fragment;
@@ -96,8 +101,33 @@ void Shader::Compile(const char* vertexSource, const char* fragmentSource)
 void Shader::bind()
 {
 	glUseProgram(ID);
-};
+}
+void Shader::unBind()
+{
+	glUseProgram(0);
+}
 
+void Shader::clearColor(float R, float G, float B, float A)
+{
+	if ((R >= 0.0f && R <= 1.0f) && (G >= 0.0f && G <= 1.0f) && (B >= 0.0f && B <= 1.0f) && (A >= 0.0f && A <= 1.0f))
+	{
+		glClearColor(R, G, B, A);
+	}
+	else
+	{
+		std::cout << "RGBA value doesn't match the right format" << std::endl;
+		std::cout << "Each RGBA value must be a float between 0.0f and 1.0f" << std::endl;
+		std::cout << "R = " << R << std::endl;
+		std::cout << "G = " << G << std::endl;
+		std::cout << "B = " << B << std::endl;
+		std::cout << "A = " << A << std::endl;
+	}
+}
+
+void Shader::clear()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+}
 
 void Shader::setBool(const std::string& name, bool value) const 
 {
